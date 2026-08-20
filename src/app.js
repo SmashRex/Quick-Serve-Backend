@@ -14,6 +14,7 @@ import partnerAuthRoutes from './modules/partnerAuth/partnerAuth.routes.js';
 import adminPartnersRoutes from './modules/adminPartners/adminPartners.routes.js';
 import adminOrdersRoutes from './modules/adminOrders/adminOrders.routes.js';
 import riderTasksRoutes from './modules/riderTasks/riderTasks.routes.js';
+import path from 'path';
 
 
 const app = express();
@@ -23,6 +24,7 @@ app.use(cors());
 app.use(morgan('dev'));
 app.use('/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
+
 
 
 import db from './config/db.js';
