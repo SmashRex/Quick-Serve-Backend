@@ -22,31 +22,43 @@ export async function initiatePayment(customerId, orderId) {
   const customer = await db('users').where({ id: customerId }).first();
   if (!customer) throw new ApiError(404, 'Customer account not found.');
 
-  // Reference must be unique per attempt — order id + random suffix guards against
-  // any timing collision if this route is somehow called twice in the same millisecond.
+  // Reuse an existing pending DB row instead of creating a duplicate — but
+  // Paystack itself rejects re-initializing a transaction against a reference
+  // it has already seen, even an incomplete one. So we keep the same payment
+  // row (same id, same amount) but generate a FRESH reference each time we
+  // actually call Paystack, updating the row rather than inserting a new one.
+  let payment = await db('payments')
+    .where({ order_id: order.id, status: 'pending' })
+    .orderBy('created_at', 'desc')
+    .first();
+
   const reference = `QS-${order.id}-${crypto.randomUUID().slice(0, 8)}`;
 
-  // Insert the payment row BEFORE calling Paystack. If the Paystack call fails or
-  // times out below, we still have a record that an attempt was made — nothing
-  // is lost, and it can be reconciled later instead of vanishing silently.
-  const [payment] = await db('payments')
-    .insert({
-      order_id: order.id,
-      amount: order.price,
-      provider: 'paystack',
-      provider_ref: reference,
-      status: 'pending',
-    })
-    .returning('*');
+  if (payment) {
+    [payment] = await db('payments')
+      .where({ id: payment.id })
+      .update({ provider_ref: reference, updated_at: new Date() })
+      .returning('*');
+  } else {
+    [payment] = await db('payments')
+      .insert({
+        order_id: order.id,
+        amount: order.price,
+        provider: 'paystack',
+        provider_ref: reference,
+        status: 'pending',
+      })
+      .returning('*');
+  }
 
   // Paystack expects amount in kobo (smallest currency unit) — this is the ONLY
   // place in the app this conversion happens.
-  const amountKobo = Math.round(Number(order.price) * 100);
+  const amountKobo = Math.round(Number(payment.amount) * 100);
 
   const paystackResult = await initializeTransaction({
     email: customer.email,
     amountKobo,
-    reference,
+    reference: payment.provider_ref,
   });
 
   return {

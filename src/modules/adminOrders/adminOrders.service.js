@@ -1,6 +1,7 @@
 import db from '../../config/db.js';
 import ApiError from '../../utils/ApiError.js';
 import { formatOrder } from '../../utils/formatters.js';
+import { assertValidTransition } from '../../services/orderTransitions.service.js';
 
 const ASSIGNABLE_LEGS = ['pickup', 'delivery'];
 
@@ -47,4 +48,58 @@ export async function assignRider(orderId, riderId, leg) {
 
   const items = await db('order_items').where({ order_id: orderId });
   return formatOrder(updated, items);
+}
+
+
+
+export async function assignPartner(orderId, partnerId, assignedByAdminId) {
+  const order = await db('orders').where({ id: orderId }).first();
+  if (!order) throw new ApiError(404, 'Order not found.');
+
+  const partner = await db('partners').where({ id: partnerId }).first();
+  if (!partner) throw new ApiError(404, 'Partner not found.');
+  if (partner.status !== 'active') {
+    throw new ApiError(400, `Partner is not active (status: "${partner.status}") and cannot be assigned orders.`);
+  }
+
+  await assertValidTransition(order.current_status, 'sent_to_partner', 'admin');
+
+  const updatedOrder = await db.transaction(async (trx) => {
+    const [updated] = await trx('orders')
+      .where({ id: orderId })
+      .update({ partner_id: partnerId, current_status: 'sent_to_partner', updated_at: new Date() })
+      .returning('*');
+
+    await trx('order_status_history').insert({
+      order_id: orderId,
+      from_status: order.current_status,
+      to_status: 'sent_to_partner',
+      changed_by_type: 'admin',
+      changed_by_id: assignedByAdminId,
+    });
+
+    return updated;
+  });
+
+  const items = await db('order_items').where({ order_id: orderId });
+  return formatOrder(updatedOrder, items);
+}
+
+
+const TERMINAL_STATUSES_FOR_BREACH = ['delivered', 'cancelled'];
+
+export async function getBreachedOrders() {
+  const orders = await db('orders')
+    .whereNotNull('sla_deadline')
+    .where('sla_deadline', '<', new Date())
+    .whereNotIn('current_status', TERMINAL_STATUSES_FOR_BREACH)
+    .orderBy('sla_deadline', 'asc');
+
+  return orders.map((order) => {
+    const msOverdue = new Date().getTime() - new Date(order.sla_deadline).getTime();
+    return {
+      ...formatOrder(order),
+      minutesOverdue: Math.round(msOverdue / 60000),
+    };
+  });
 }

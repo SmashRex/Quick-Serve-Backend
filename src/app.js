@@ -15,6 +15,8 @@ import adminPartnersRoutes from './modules/adminPartners/adminPartners.routes.js
 import adminOrdersRoutes from './modules/adminOrders/adminOrders.routes.js';
 import riderTasksRoutes from './modules/riderTasks/riderTasks.routes.js';
 import path from 'path';
+import partnerOrdersRoutes from './modules/partnerOrders/partnerOrders.routes.js';
+
 
 
 const app = express();
@@ -41,7 +43,7 @@ app.get('/db-test', async (req, res, next) => {
 app.use('/auth', authRoutes);
 app.use('/addresses', addressesRoutes);
 app.use('/orders', ordersRoutes);
-app.use('/payments', paymentsRoutes);
+app.use(paymentsRoutes);
 app.use(adminAuthRoutes);
 app.use(ridersRoutes);
 app.use(riderAuthRoutes);
@@ -49,6 +51,7 @@ app.use(partnerAuthRoutes);
 app.use(adminPartnersRoutes);
 app.use(adminOrdersRoutes);
 app.use(riderTasksRoutes);
+app.use(partnerOrdersRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ success: true, message: 'QuickServe API is running' });

@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import db from '../../config/db.js';
 import ApiError from '../../utils/ApiError.js';
-import { generateVerificationToken } from '../../utils/tokens.js';
+import { generateVerificationToken, generateAccessToken, generateRefreshToken } from '../../utils/tokens.js';
 import { formatPartner } from '../../utils/formatters.js';
 
 const SALT_ROUNDS = 10;
@@ -21,7 +21,7 @@ export async function onboardPartner({ businessName, email, password, phone, max
       business_name: businessName,
       email,
       password_hash,
-      phone: phone || null,
+      contact_phone: phone,
       status: 'onboarding',
       max_turnaround_hours: maxTurnaroundHours,
     })
@@ -57,4 +57,31 @@ export async function verifyPartnerEmail(rawToken) {
   await db('partner_verification_tokens').where({ id: record.id }).update({ used_at: new Date() });
 
   return { message: 'Email verified successfully. You can now log in once approved by ops.' };
+}
+
+export async function login(email, password) {
+  const partner = await db('partners').where({ email }).first();
+  if (!partner) {
+    throw new ApiError(401, 'Invalid email or password.');
+  }
+
+  const passwordMatches = await bcrypt.compare(password, partner.password_hash);
+  if (!passwordMatches) {
+    throw new ApiError(401, 'Invalid email or password.');
+  }
+
+  if (!partner.email_verified_at) {
+    throw new ApiError(401, 'Please verify your email before logging in.');
+  }
+
+  if (partner.status !== 'active') {
+    throw new ApiError(401, `Your account is not yet approved (status: "${partner.status}"). Please wait for ops approval.`);
+  }
+
+  const tokenPayload = { id: partner.id, role: 'partner' };
+
+  const accessToken = generateAccessToken(tokenPayload);
+  const refreshToken = generateRefreshToken(tokenPayload);
+
+  return { accessToken, refreshToken };
 }

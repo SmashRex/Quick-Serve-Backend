@@ -1,4 +1,6 @@
 import * as paymentsService from './payments.service.js';
+import { verifyWebhookSignature } from '../../utils/paystackClient.js';
+import crypto from 'crypto';
 
 export async function initiatePayment(req, res, next) {
   try {
@@ -9,10 +11,15 @@ export async function initiatePayment(req, res, next) {
   }
 }
 
-import { verifyWebhookSignature } from '../../utils/paystackClient.js';
+
 
 export async function webhook(req, res, next) {
   try {
+   
+
+// ...inside webhook(), near your existing debug logs:
+console.log('--- SECRET KEY FINGERPRINT (server) ---');
+console.log(crypto.createHash('sha256').update(process.env.PAYSTACK_SECRET_KEY).digest('hex').slice(0, 12));
     const signature = req.headers['x-paystack-signature'];
 
     if (!signature || !verifyWebhookSignature(req.body, signature)) {

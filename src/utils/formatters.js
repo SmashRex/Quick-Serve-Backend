@@ -38,6 +38,8 @@ export function formatOrder(row, items) {
     paymentStatus: row.payment_status,
     scheduledPickupStart,
     scheduledPickupEnd,
+    acceptedAt: row.accepted_at,
+    slaDeadline: row.sla_deadline,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
