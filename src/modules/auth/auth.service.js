@@ -31,7 +31,7 @@ export async function signup({ fullName, email, password, phone }) {
   });
 
   // No email provider yet — log the link so we can test manually
-  console.log(`[VERIFICATION LINK] http://localhost:3000/auth/verify?token=${rawToken}`);
+  console.log(`Verification link for ${email}: ${process.env.BASE_URL}/auth/verify-email/${rawToken}`);
 
   return {
     id: user.id,

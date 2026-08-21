@@ -3,11 +3,11 @@ import ApiError from '../../utils/ApiError.js';
 import { formatOrder } from '../../utils/formatters.js';
 import { assertValidTransition } from '../../services/orderTransitions.service.js';
 
-const ASSIGNABLE_LEGS = ['pickup', 'delivery'];
+const ASSIGNABLE_ASSIGNMENT_TYPES = ['pickup', 'delivery'];
 
-export async function assignRider(orderId, riderId, leg) {
-  if (!ASSIGNABLE_LEGS.includes(leg)) {
-    throw new ApiError(400, `"leg" must be one of: ${ASSIGNABLE_LEGS.join(', ')}.`);
+export async function assignRider(orderId, riderId, assignmentType, assignedByAdminId) {
+  if (!ASSIGNABLE_ASSIGNMENT_TYPES.includes(assignmentType)) {
+    throw new ApiError(400, `"assignmentType" must be one of: ${ASSIGNABLE_ASSIGNMENT_TYPES.join(', ')}.`);
   }
 
   const order = await db('orders').where({ id: orderId }).first();
@@ -16,7 +16,7 @@ export async function assignRider(orderId, riderId, leg) {
   const rider = await db('riders').where({ id: riderId }).first();
   if (!rider) throw new ApiError(404, 'Rider not found.');
 
-  const column = leg === 'pickup' ? 'pickup_rider_id' : 'delivery_rider_id';
+  const column = assignmentType === 'pickup' ? 'pickup_rider_id' : 'delivery_rider_id';
 
   const updated = await db.transaction(async (trx) => {
     const [updatedOrder] = await trx('orders')
@@ -27,7 +27,7 @@ export async function assignRider(orderId, riderId, leg) {
     // Only advance the state machine to rider_assigned on the FIRST (pickup) assignment.
     // Assigning a delivery rider later (order already progressed past pickup) should NOT
     // reset current_status backwards — it's a separate concern from the order's lifecycle stage.
-    if (leg === 'pickup' && order.current_status === 'order_placed') {
+    if (assignmentType === 'pickup' && order.current_status === 'order_placed') {
       await trx('orders')
         .where({ id: orderId })
         .update({ current_status: 'rider_assigned' });

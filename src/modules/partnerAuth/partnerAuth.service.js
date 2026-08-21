@@ -36,7 +36,8 @@ export async function onboardPartner({ businessName, email, password, phone, max
     expires_at,
   });
 
-  console.log(`[PARTNER VERIFICATION LINK] http://localhost:3000/partner-auth/verify?token=${rawToken}`);
+  // No email provider yet — log the link so we can test manually
+  console.log(`Verification link for ${email}: ${process.env.BASE_URL}/partner-auth/verify-email/${rawToken}`);
 
   return formatPartner(partner);
 }

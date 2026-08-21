@@ -19,8 +19,8 @@ export async function getRiderTasks(riderId) {
 
 
 
-// Maps a target status to which rider-leg column must match the requesting rider.
-const STATUS_LEG_OWNERSHIP = {
+// Maps a target status to which rider-assignment column must match the requesting rider.
+const STATUS_ASSIGNMENT_OWNERSHIP = {
   picked_up: 'pickup_rider_id',
   at_hub: 'pickup_rider_id',
   returned_to_hub: 'delivery_rider_id',
@@ -32,18 +32,19 @@ export async function updateOrderStatus(riderId, orderId, toStatus) {
   const order = await db('orders').where({ id: orderId }).first();
   if (!order) throw new ApiError(404, 'Order not found.');
 
-  const ownershipColumn = STATUS_LEG_OWNERSHIP[toStatus];
+  const ownershipColumn = STATUS_ASSIGNMENT_OWNERSHIP[toStatus];
   if (!ownershipColumn) {
     // toStatus isn't one of the rider-drivable statuses at all — let
     // assertValidTransition below produce the real error, since it's the
     // single source of truth for "what's a valid transition."
   } else if (order[ownershipColumn] !== riderId) {
-    throw new ApiError(403, 'You are not the assigned rider for this leg of the order.');
+    throw new ApiError(403, 'You are not the assigned rider for this part of the order.');
   }
 
   const fromStatus = order.current_status;
 
   await assertValidTransition(fromStatus, toStatus, 'rider');
+  await assertProofRequirementMet(orderId, toStatus); 
 
   const updatedOrder = await db.transaction(async (trx) => {
     const [updated] = await trx('orders')
@@ -77,9 +78,9 @@ export async function uploadProof(riderId, orderId, itemId, fileBuffer, original
   const order = await db('orders').where({ id: orderId }).first();
   if (!order) throw new ApiError(404, 'Order not found.');
 
-  const isPickupLeg = order.pickup_rider_id === riderId;
-  const isDeliveryLeg = order.delivery_rider_id === riderId;
-  if (!isPickupLeg && !isDeliveryLeg) {
+  const isPickupAssignment = order.pickup_rider_id === riderId;
+const isDeliveryAssignment = order.delivery_rider_id === riderId;
+if (!isPickupAssignment && !isDeliveryAssignment) {
     throw new ApiError(403, 'You are not an assigned rider for this order.');
   }
 
@@ -88,9 +89,9 @@ export async function uploadProof(riderId, orderId, itemId, fileBuffer, original
 
   const url = await saveFile(fileBuffer, originalFilename);
 
-  // Which column to write depends on which leg this rider is on, not on the
+  // Which column to write depends on which assignment this rider is on, not on the
   // order's current status — a pickup rider always writes pickup_photo_url.
-  const column = isPickupLeg ? 'pickup_photo_url' : 'delivery_photo_url';
+  const column = isPickupAssignment ? 'pickup_photo_url' : 'delivery_photo_url';
 
   const [updatedItem] = await db('order_items')
     .where({ id: itemId })
@@ -125,13 +126,6 @@ const RIDER_STATUSES = ['offline', 'available', 'on_task'];
 export async function updateRiderAvailability(riderId, newStatus) {
   const rider = await db('riders').where({ id: riderId }).first();
   if (!rider) throw new ApiError(404, 'Rider account not found.');
-
-  if (rider.status === 'on_task' && newStatus !== 'on_task') {
-    throw new ApiError(
-      400,
-      'Cannot manually change status while on an active task. Status updates automatically once the task is complete.'
-    );
-  }
 
   const [updated] = await db('riders')
     .where({ id: riderId })
