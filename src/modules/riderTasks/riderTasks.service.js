@@ -28,23 +28,24 @@ const STATUS_ASSIGNMENT_OWNERSHIP = {
   delivered: 'delivery_rider_id',
 };
 
+const PHOTO_REQUIRED_FOR = {
+  at_hub: 'pickup_photo_url',
+  delivered: 'delivery_photo_url',
+};
+
 export async function updateOrderStatus(riderId, orderId, toStatus) {
   const order = await db('orders').where({ id: orderId }).first();
   if (!order) throw new ApiError(404, 'Order not found.');
 
-  const ownershipColumn = STATUS_ASSIGNMENT_OWNERSHIP[toStatus];
-  if (!ownershipColumn) {
-    // toStatus isn't one of the rider-drivable statuses at all — let
-    // assertValidTransition below produce the real error, since it's the
-    // single source of truth for "what's a valid transition."
-  } else if (order[ownershipColumn] !== riderId) {
-    throw new ApiError(403, 'You are not the assigned rider for this part of the order.');
+  const ownershipColumn = STATUS_LEG_OWNERSHIP[toStatus];
+  if (ownershipColumn && order[ownershipColumn] !== riderId) {
+    throw new ApiError(403, 'You are not the assigned rider for this leg of the order.');
   }
 
   const fromStatus = order.current_status;
 
   await assertValidTransition(fromStatus, toStatus, 'rider');
-  await assertProofRequirementMet(orderId, toStatus); 
+  await assertProofRequirementMet(orderId, toStatus);
 
   const updatedOrder = await db.transaction(async (trx) => {
     const [updated] = await trx('orders')
@@ -60,45 +61,24 @@ export async function updateOrderStatus(riderId, orderId, toStatus) {
       changed_by_id: riderId,
     });
 
+    // Auto-generate a pending payout the moment an order is delivered, since
+    // the partner has now completed their part of the work. Only create it
+    // if the order actually has a partner assigned — a payout with no
+    // partner to pay doesn't make sense.
+    if (toStatus === 'delivered' && order.partner_id) {
+      await trx('partner_payouts').insert({
+        partner_id: order.partner_id,
+        order_id: orderId,
+        amount: order.price,
+        status: 'pending',
+      });
+    }
+
     return updated;
   });
 
   const items = await db('order_items').where({ order_id: orderId });
   return formatOrder(updatedOrder, items);
-}
-
-
-
-const PHOTO_REQUIRED_FOR = {
-  at_hub: 'pickup_photo_url',
-  delivered: 'delivery_photo_url',
-};
-
-export async function uploadProof(riderId, orderId, itemId, fileBuffer, originalFilename) {
-  const order = await db('orders').where({ id: orderId }).first();
-  if (!order) throw new ApiError(404, 'Order not found.');
-
-  const isPickupAssignment = order.pickup_rider_id === riderId;
-const isDeliveryAssignment = order.delivery_rider_id === riderId;
-if (!isPickupAssignment && !isDeliveryAssignment) {
-    throw new ApiError(403, 'You are not an assigned rider for this order.');
-  }
-
-  const item = await db('order_items').where({ id: itemId, order_id: orderId }).first();
-  if (!item) throw new ApiError(404, 'Order item not found on this order.');
-
-  const url = await saveFile(fileBuffer, originalFilename);
-
-  // Which column to write depends on which assignment this rider is on, not on the
-  // order's current status — a pickup rider always writes pickup_photo_url.
-  const column = isPickupAssignment ? 'pickup_photo_url' : 'delivery_photo_url';
-
-  const [updatedItem] = await db('order_items')
-    .where({ id: itemId })
-    .update({ [column]: url, updated_at: new Date() })
-    .returning('*');
-
-  return { itemId: updatedItem.id, [column === 'pickup_photo_url' ? 'pickupPhotoUrl' : 'deliveryPhotoUrl']: url };
 }
 
 /**

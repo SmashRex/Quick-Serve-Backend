@@ -103,3 +103,57 @@ export async function getBreachedOrders() {
     };
   });
 }
+
+export async function getOrders({ status, partnerId, riderId, page = 1, limit = 20 }) {
+  const query = db('orders');
+
+  if (status) {
+    query.where('current_status', status);
+  }
+  if (partnerId) {
+    query.where('partner_id', partnerId);
+  }
+  if (riderId) {
+    query.where(function () {
+      this.where('pickup_rider_id', riderId).orWhere('delivery_rider_id', riderId);
+    });
+  }
+
+  // Clone before pagination so the count reflects the same filters, not the paginated slice.
+  const countQuery = query.clone();
+  const [{ count }] = await countQuery.count('id as count');
+  const total = Number(count);
+
+  const offset = (page - 1) * limit;
+  const orders = await query
+    .orderBy('created_at', 'desc')
+    .limit(limit)
+    .offset(offset);
+
+  return {
+    data: orders.map((o) => formatOrder(o)),
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+}
+
+export async function getOrderProofPhotos(orderId) {
+  const order = await db('orders').where({ id: orderId }).first();
+  if (!order) throw new ApiError(404, 'Order not found.');
+
+  const items = await db('order_items').where({ order_id: orderId });
+
+  return {
+    orderId: order.id,
+    items: items.map((item) => ({
+      itemId: item.id,
+      description: item.description,
+      pickupPhotoUrl: item.pickup_photo_url,
+      deliveryPhotoUrl: item.delivery_photo_url,
+    })),
+  };
+}

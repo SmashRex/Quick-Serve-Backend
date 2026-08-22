@@ -27,5 +27,10 @@ router.post(
 );
 
 router.get('/admin/orders/breaches', authenticate, authorize('admin'), adminOrdersController.getBreaches);
+router.get('/admin/orders', authenticate, authorize('admin'), adminOrdersController.getOrders);
+router.get('/admin/orders/:id/proof-photos', authenticate, authorize('admin'), adminOrdersController.getProofPhotos);
+
+
+
 
 export default router;

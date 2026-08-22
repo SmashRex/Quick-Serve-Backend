@@ -16,6 +16,8 @@ import adminOrdersRoutes from './modules/adminOrders/adminOrders.routes.js';
 import riderTasksRoutes from './modules/riderTasks/riderTasks.routes.js';
 import path from 'path';
 import partnerOrdersRoutes from './modules/partnerOrders/partnerOrders.routes.js';
+import adminDisputesRoutes from './modules/adminDisputes/adminDisputes.routes.js';
+import adminPayoutsRoutes from './modules/adminPayouts/adminPayouts.routes.js';
 
 
 
@@ -40,6 +42,12 @@ app.get('/db-test', async (req, res, next) => {
   }
 });
 
+
+
+app.get('/health', (req, res) => {
+  res.json({ success: true, message: 'QuickServe API is running' });
+});
+
 app.use('/auth', authRoutes);
 app.use('/addresses', addressesRoutes);
 app.use('/orders', ordersRoutes);
@@ -52,14 +60,8 @@ app.use(adminPartnersRoutes);
 app.use(adminOrdersRoutes);
 app.use(riderTasksRoutes);
 app.use(partnerOrdersRoutes);
-
-app.get('/health', (req, res) => {
-  res.json({ success: true, message: 'QuickServe API is running' });
-});
-
-// module routes mounted here later, e.g.:
-// import authRoutes from './modules/auth/auth.routes.js';
-// app.use('/auth', authRoutes);
+app.use(adminDisputesRoutes);
+app.use(adminPayoutsRoutes);
 
 app.use(errorHandler);
 
