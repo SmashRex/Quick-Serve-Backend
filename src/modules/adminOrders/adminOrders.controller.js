@@ -1,8 +1,5 @@
 import * as adminOrdersService from './adminOrders.service.js';
 
-const parsedLimit = limit ? parseInt(limit, 10) : 20;
-const safeLimit = Math.min(Math.max(parsedLimit, 1), 100); // clamp between 1 and 100
-
 export async function assignRider(req, res, next) {
   try {
     const { riderId, assignmentType } = req.body;
