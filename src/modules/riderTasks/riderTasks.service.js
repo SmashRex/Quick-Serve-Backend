@@ -37,7 +37,7 @@ export async function updateOrderStatus(riderId, orderId, toStatus) {
   const order = await db('orders').where({ id: orderId }).first();
   if (!order) throw new ApiError(404, 'Order not found.');
 
-  const ownershipColumn = STATUS_LEG_OWNERSHIP[toStatus];
+  const ownershipColumn = STATUS_ASSIGNMENT_OWNERSHIP[toStatus];
   if (ownershipColumn && order[ownershipColumn] !== riderId) {
     throw new ApiError(403, 'You are not the assigned rider for this leg of the order.');
   }
@@ -117,4 +117,28 @@ export async function updateRiderAvailability(riderId, newStatus) {
     status: updated.status,
     updatedAt: updated.updated_at,
   };
+}
+export async function uploadProof(riderId, orderId, itemId, fileBuffer, originalFilename) {
+  const order = await db('orders').where({ id: orderId }).first();
+  if (!order) throw new ApiError(404, 'Order not found.');
+
+  const isPickupAssignment = order.pickup_rider_id === riderId;
+  const isDeliveryAssignment = order.delivery_rider_id === riderId;
+  if (!isPickupAssignment && !isDeliveryAssignment) {
+    throw new ApiError(403, 'You are not an assigned rider for this order.');
+  }
+
+  const item = await db('order_items').where({ id: itemId, order_id: orderId }).first();
+  if (!item) throw new ApiError(404, 'Order item not found on this order.');
+
+  const url = await saveFile(fileBuffer, originalFilename);
+
+  const column = isPickupAssignment ? 'pickup_photo_url' : 'delivery_photo_url';
+
+  const [updatedItem] = await db('order_items')
+    .where({ id: itemId })
+    .update({ [column]: url, updated_at: new Date() })
+    .returning('*');
+
+  return { itemId: updatedItem.id, [column === 'pickup_photo_url' ? 'pickupPhotoUrl' : 'deliveryPhotoUrl']: url };
 }

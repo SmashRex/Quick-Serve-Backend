@@ -18,6 +18,7 @@ import path from 'path';
 import partnerOrdersRoutes from './modules/partnerOrders/partnerOrders.routes.js';
 import adminDisputesRoutes from './modules/adminDisputes/adminDisputes.routes.js';
 import adminPayoutsRoutes from './modules/adminPayouts/adminPayouts.routes.js';
+import db from './config/db.js';
 
 
 
@@ -30,8 +31,6 @@ app.use('/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 
 
-
-import db from './config/db.js';
 
 app.get('/db-test', async (req, res, next) => {
   try {
@@ -62,6 +61,9 @@ app.use(riderTasksRoutes);
 app.use(partnerOrdersRoutes);
 app.use(adminDisputesRoutes);
 app.use(adminPayoutsRoutes);
+
+
+
 
 app.use(errorHandler);
 
