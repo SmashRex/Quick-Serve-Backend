@@ -57,4 +57,20 @@ export async function postMessage(orderId, actorType, actorId, body) {
   return formatMessage(message);
 }
 
+export async function getBothThreads(orderId) {
+  const order = await db('orders').where({ id: orderId }).first();
+  if (!order) throw new ApiError(404, 'Order not found.');
+
+  const [customerMessages, partnerMessages] = await Promise.all([
+    db('messages').where({ order_id: orderId, thread_type: 'customer_thread' }).orderBy('created_at', 'asc'),
+    db('messages').where({ order_id: orderId, thread_type: 'partner_thread' }).orderBy('created_at', 'asc'),
+  ]);
+
+  return {
+    orderId,
+    customerThread: customerMessages.map(formatMessage),
+    partnerThread: partnerMessages.map(formatMessage),
+  };
+}
+
 export { formatMessage };

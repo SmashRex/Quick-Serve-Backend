@@ -3,6 +3,7 @@ import { formatOrder } from '../../utils/formatters.js';
 import ApiError from '../../utils/ApiError.js';
 import { assertValidTransition } from '../../services/orderTransitions.service.js';
 import { saveFile } from '../../utils/cloudinaryStorage.js';
+import { createNotification } from '../../services/notifications.service.js';
 
 const TERMINAL_STATUSES = ['delivered', 'cancelled'];
 
@@ -77,6 +78,14 @@ export async function updateOrderStatus(riderId, orderId, toStatus) {
 
   const items = await db('order_items').where({ order_id: orderId });
   return formatOrder(updatedOrder, items);
+
+  await createNotification({
+  recipientType: 'customer',
+  recipientId: order.customer_id,
+  type: 'order_status_changed',
+  message: `Your order status changed to "${toStatus}".`,
+  orderId,
+});
 }
 
 /**

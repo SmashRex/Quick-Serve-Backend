@@ -35,3 +35,12 @@ export async function postMessageAsPartner(req, res, next) {
     next(err);
   }
 }
+
+export async function getBothThreads(req, res, next) {
+  try {
+    const result = await messagesService.getBothThreads(req.params.id);
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+}

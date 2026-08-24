@@ -1,5 +1,6 @@
 import db from '../../config/db.js';
 import ApiError from '../../utils/ApiError.js';
+import { createNotification } from '../../services/notifications.service.js';
 
 function formatPayout(row) {
   return {
@@ -49,6 +50,14 @@ export async function markPaid(payoutId, adminId) {
       updated_at: new Date(),
     })
     .returning('*');
+
+await createNotification({
+  recipientType: 'partner',
+  recipientId: payout.partner_id,
+  type: 'payout_paid',
+  message: `A payout of ${payout.amount} has been marked as paid.`,
+  orderId: payout.order_id,
+});
 
   return formatPayout(updated);
 }

@@ -1,6 +1,7 @@
 import db from '../../config/db.js';
 import ApiError from '../../utils/ApiError.js';
 import { formatDispute } from '../orders/disputes.service.js';
+import { createNotification } from '../../services/notifications.service.js';
 
 export async function listDisputes({ status, page = 1, limit = 20 }) {
   const query = db('disputes');
@@ -68,5 +69,12 @@ export async function resolveDispute(disputeId, resolutionNote, adminId) {
     return updatedDispute;
   });
 
+  await createNotification({
+  recipientType: dispute.raised_by_type,
+  recipientId: dispute.raised_by_id,
+  type: 'dispute_resolved',
+  message: `Your dispute has been resolved: ${resolutionNote}`,
+  orderId: dispute.order_id,
+});
   return formatDispute(updated);
 }

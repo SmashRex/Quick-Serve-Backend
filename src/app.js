@@ -19,6 +19,10 @@ import partnerOrdersRoutes from './modules/partnerOrders/partnerOrders.routes.js
 import adminDisputesRoutes from './modules/adminDisputes/adminDisputes.routes.js';
 import adminPayoutsRoutes from './modules/adminPayouts/adminPayouts.routes.js';
 import db from './config/db.js';
+import notificationsRoutes from './modules/notifications/notifications.routes.js';
+import devicesRoutes from './modules/devices/devices.routes.js';
+
+
 
 
 
@@ -61,8 +65,8 @@ app.use(riderTasksRoutes);
 app.use(partnerOrdersRoutes);
 app.use(adminDisputesRoutes);
 app.use(adminPayoutsRoutes);
-
-
+app.use('/notifications', notificationsRoutes);
+app.use(devicesRoutes);
 
 
 app.use(errorHandler);
