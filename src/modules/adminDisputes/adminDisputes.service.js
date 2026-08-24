@@ -32,16 +32,41 @@ export async function resolveDispute(disputeId, resolutionNote, adminId) {
     throw new ApiError(400, 'This dispute has already been resolved.');
   }
 
-  const [updated] = await db('disputes')
-    .where({ id: disputeId })
-    .update({
-      status: 'resolved',
-      resolution_note: resolutionNote,
-      resolved_by_admin_id: adminId,
-      resolved_at: new Date(),
-      updated_at: new Date(),
-    })
-    .returning('*');
+  const updated = await db.transaction(async (trx) => {
+    const [updatedDispute] = await trx('disputes')
+      .where({ id: disputeId })
+      .update({
+        status: 'resolved',
+        resolution_note: resolutionNote,
+        resolved_by_admin_id: adminId,
+        resolved_at: new Date(),
+        updated_at: new Date(),
+      })
+      .returning('*');
+
+    // Restore the order to whatever status it was in before the dispute was
+    // raised, so it isn't permanently stuck in "disputed" once ops has
+    // resolved the underlying issue. Only restore if the order is STILL
+    // sitting in "disputed" — if something else already moved it (e.g. ops
+    // separately cancelled it), we don't want to clobber that.
+    const order = await trx('orders').where({ id: dispute.order_id }).first();
+    if (order && order.current_status === 'disputed' && dispute.status_at_dispute) {
+      await trx('orders')
+        .where({ id: dispute.order_id })
+        .update({ current_status: dispute.status_at_dispute, updated_at: new Date() });
+
+      await trx('order_status_history').insert({
+        order_id: dispute.order_id,
+        from_status: 'disputed',
+        to_status: dispute.status_at_dispute,
+        changed_by_type: 'admin',
+        changed_by_id: adminId,
+        note: 'Order restored to previous status after dispute resolution.',
+      });
+    }
+
+    return updatedDispute;
+  });
 
   return formatDispute(updated);
 }

@@ -17,8 +17,6 @@ export async function getRiderTasks(riderId) {
   return orders.map((o) => formatOrder(o));
 }
 
-
-
 // Maps a target status to which rider-assignment column must match the requesting rider.
 const STATUS_ASSIGNMENT_OWNERSHIP = {
   picked_up: 'pickup_rider_id',
@@ -118,6 +116,7 @@ export async function updateRiderAvailability(riderId, newStatus) {
     updatedAt: updated.updated_at,
   };
 }
+
 export async function uploadProof(riderId, orderId, itemId, fileBuffer, originalFilename) {
   const order = await db('orders').where({ id: orderId }).first();
   if (!order) throw new ApiError(404, 'Order not found.');
@@ -131,9 +130,24 @@ export async function uploadProof(riderId, orderId, itemId, fileBuffer, original
   const item = await db('order_items').where({ id: itemId, order_id: orderId }).first();
   if (!item) throw new ApiError(404, 'Order item not found on this order.');
 
+  // Determine which leg's photo this upload is for based on the order's
+  // current pipeline stage, not just rider identity — a rider can be
+  // assigned to BOTH legs on the same order, so identity alone is
+  // ambiguous. Delivery-stage statuses mean this upload is a delivery
+  // photo; anything before that is a pickup photo.
+  const DELIVERY_STAGE_STATUSES = ['returned_to_hub', 'out_for_delivery', 'delivered'];
+  const isDeliveryStage = DELIVERY_STAGE_STATUSES.includes(order.current_status);
+
+  if (isDeliveryStage && !isDeliveryAssignment) {
+    throw new ApiError(403, 'You are not the assigned delivery rider for this order.');
+  }
+  if (!isDeliveryStage && !isPickupAssignment) {
+    throw new ApiError(403, 'You are not the assigned pickup rider for this order.');
+  }
+
   const url = await saveFile(fileBuffer, originalFilename);
 
-  const column = isPickupAssignment ? 'pickup_photo_url' : 'delivery_photo_url';
+  const column = isDeliveryStage ? 'delivery_photo_url' : 'pickup_photo_url';
 
   const [updatedItem] = await db('order_items')
     .where({ id: itemId })

@@ -15,6 +15,7 @@ export async function createDispute(customerId, orderId, reason) {
       raised_by_id: customerId,
       reason,
       status: 'open',
+      status_at_dispute: order.current_status,
     })
     .returning('*');
 
@@ -32,6 +33,7 @@ export function formatDispute(row) {
     raisedById: row.raised_by_id,
     reason: row.reason,
     status: row.status,
+    statusAtDispute: row.status_at_dispute,
     resolutionNote: row.resolution_note,
     resolvedByAdminId: row.resolved_by_admin_id,
     resolvedAt: row.resolved_at,
