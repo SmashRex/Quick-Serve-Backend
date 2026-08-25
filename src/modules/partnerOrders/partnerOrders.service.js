@@ -51,6 +51,8 @@ export async function acceptOrder(partnerId, orderId) {
     return updated;
   });
 
+  await writeOrderStatusRealtime(orderId, 'at_partner');
+
   const items = await db('order_items').where({ order_id: orderId });
   return formatOrder(updatedOrder, items);
 }
@@ -82,6 +84,7 @@ export async function updateOrderStatus(partnerId, orderId, toStatus) {
 
     return updated;
   });
+  await writeOrderStatusRealtime(orderId, toStatus);
 
   const items = await db('order_items').where({ order_id: orderId });
   return formatOrder(updatedOrder, items);

@@ -6,14 +6,11 @@ import { createNotification } from '../../services/notifications.service.js';
 export async function listDisputes({ status, page = 1, limit = 20 }) {
   const query = db('disputes');
   if (status) query.where('status', status);
-
   const countQuery = query.clone();
   const [{ count }] = await countQuery.count('id as count');
   const total = Number(count);
-
   const offset = (page - 1) * limit;
   const disputes = await query.orderBy('created_at', 'desc').limit(limit).offset(offset);
-
   return {
     data: disputes.map(formatDispute),
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
@@ -46,10 +43,10 @@ export async function resolveDispute(disputeId, resolutionNote, adminId) {
       .returning('*');
 
     // Restore the order to whatever status it was in before the dispute was
-    // raised, so it isn't permanently stuck in "disputed" once ops has
-    // resolved the underlying issue. Only restore if the order is STILL
-    // sitting in "disputed" — if something else already moved it (e.g. ops
-    // separately cancelled it), we don't want to clobber that.
+    // raised — using the status_at_dispute column captured at dispute-creation
+    // time, not a reconstructed guess from history. Only restore if the order
+    // is STILL sitting in "disputed" — if ops took some other action on the
+    // order in the meantime (e.g. cancelled it), don't clobber that.
     const order = await trx('orders').where({ id: dispute.order_id }).first();
     if (order && order.current_status === 'disputed' && dispute.status_at_dispute) {
       await trx('orders')
@@ -70,11 +67,12 @@ export async function resolveDispute(disputeId, resolutionNote, adminId) {
   });
 
   await createNotification({
-  recipientType: dispute.raised_by_type,
-  recipientId: dispute.raised_by_id,
-  type: 'dispute_resolved',
-  message: `Your dispute has been resolved: ${resolutionNote}`,
-  orderId: dispute.order_id,
-});
+    recipientType: dispute.raised_by_type,
+    recipientId: dispute.raised_by_id,
+    type: 'dispute_resolved',
+    message: `Your dispute has been resolved: ${resolutionNote}`,
+    orderId: dispute.order_id,
+  });
+
   return formatDispute(updated);
 }

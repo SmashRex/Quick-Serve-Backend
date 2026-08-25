@@ -4,6 +4,9 @@ import ApiError from '../../utils/ApiError.js';
 import { generateAccessToken, generateRefreshToken, generateVerificationToken } from '../../utils/tokens.js';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import { sendEmail } from '../../utils/email.js';
+import { verifyEmailTemplate } from '../../templates/emailTemplates.js';
+
 
 
 const SALT_ROUNDS = 10;
@@ -30,8 +33,15 @@ export async function signup({ fullName, email, password, phone }) {
     expires_at,
   });
 
-  // No email provider yet — log the link so we can test manually
-  console.log(`Verification link for ${email}: ${process.env.BASE_URL}/auth/verify-email/${rawToken}`);
+ const verificationUrl= `${process.env.BASE_URL}/auth/verify-email/${rawToken}`;
+
+  await sendEmail({
+  to: email,
+  subject: 'Verify your QuickServe account',
+  html: verifyEmailTemplate(verificationUrl),
+  })
+
+
 
   return {
     id: user.id,

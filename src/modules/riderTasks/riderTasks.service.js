@@ -4,6 +4,7 @@ import ApiError from '../../utils/ApiError.js';
 import { assertValidTransition } from '../../services/orderTransitions.service.js';
 import { saveFile } from '../../utils/cloudinaryStorage.js';
 import { createNotification } from '../../services/notifications.service.js';
+import { writeOrderStatusRealtime } from '../../services/realtimeStatus.service.js';
 
 const TERMINAL_STATUSES = ['delivered', 'cancelled'];
 
@@ -76,16 +77,20 @@ export async function updateOrderStatus(riderId, orderId, toStatus) {
     return updated;
   });
 
+  // Both of these run only after the transaction has committed successfully —
+  // neither should fire for a status change that ended up rolled back.
+  await createNotification({
+    recipientType: 'customer',
+    recipientId: order.customer_id,
+    type: 'order_status_changed',
+    message: `Your order status changed to "${toStatus}".`,
+    orderId,
+  });
+
+  await writeOrderStatusRealtime(orderId, toStatus);
+
   const items = await db('order_items').where({ order_id: orderId });
   return formatOrder(updatedOrder, items);
-
-  await createNotification({
-  recipientType: 'customer',
-  recipientId: order.customer_id,
-  type: 'order_status_changed',
-  message: `Your order status changed to "${toStatus}".`,
-  orderId,
-});
 }
 
 /**

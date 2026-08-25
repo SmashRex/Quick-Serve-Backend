@@ -24,23 +24,32 @@ export async function assignRider(orderId, riderId, assignmentType, assignedByAd
       .update({ [column]: riderId, updated_at: new Date() })
       .returning('*');
 
-    // Only advance the state machine to rider_assigned on the FIRST (pickup) assignment.
-    // Assigning a delivery rider later (order already progressed past pickup) should NOT
-    // reset current_status backwards — it's a separate concern from the order's lifecycle stage.
-    if (assignmentType === 'pickup' && order.current_status === 'order_placed') {
-      await trx('orders')
-        .where({ id: orderId })
-        .update({ current_status: 'rider_assigned' });
+    // Only advance the state machine on a PICKUP assignment where the current
+    // status genuinely allows it — checked against order_transitions itself,
+    // not a hand-rolled duplicate of that rule.
+    if (assignmentType === 'pickup') {
+      const rule = await trx('order_transitions')
+        .where({ from_status: order.current_status, to_status: 'rider_assigned' })
+        .first();
 
-      await trx('order_status_history').insert({
-        order_id: orderId,
-        from_status: 'order_placed',
-        to_status: 'rider_assigned',
-        changed_by_type: 'ops',
-        changed_by_id: assignedByAdminId, // This should be passed in or determined from context
-      });
+      if (rule) {
+        await trx('orders')
+          .where({ id: orderId })
+          .update({ current_status: 'rider_assigned' });
 
-      updatedOrder.current_status = 'rider_assigned';
+        await trx('order_status_history').insert({
+          order_id: orderId,
+          from_status: order.current_status,
+          to_status: 'rider_assigned',
+          changed_by_type: 'ops',
+          changed_by_id: assignedByAdminId,
+        });
+
+        updatedOrder.current_status = 'rider_assigned';
+      }
+      // If no rule matches (order isn't in order_placed), we silently skip
+      // advancing status — the rider gets assigned to the column either way,
+      // but the state machine only moves if the table says it's allowed to.
     }
 
     return updatedOrder;

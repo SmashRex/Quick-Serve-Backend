@@ -2,8 +2,9 @@ import { Router } from 'express';
 import authenticate from '../../middleware/authenticate.js';
 import { authorize } from '../../middleware/authorize.js';
 import  validate  from '../../middleware/validate.js';
-import { approveSchema, updatePartnerSchema } from './adminPartners.validation.js';
+import { approveSchema, updatePartnerSchema, rejectSchema } from './adminPartners.validation.js';
 import * as adminPartnersController from './adminPartners.controller.js';
+
 
 
 
@@ -26,4 +27,11 @@ router.put(
   adminPartnersController.update
 );
 
+router.post(
+  '/admin/partners/:id/reject',
+  authenticate,
+  authorize('admin'),
+  validate(rejectSchema),
+  adminPartnersController.reject
+);
 export default router;

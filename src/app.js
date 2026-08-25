@@ -14,13 +14,14 @@ import partnerAuthRoutes from './modules/partnerAuth/partnerAuth.routes.js';
 import adminPartnersRoutes from './modules/adminPartners/adminPartners.routes.js';
 import adminOrdersRoutes from './modules/adminOrders/adminOrders.routes.js';
 import riderTasksRoutes from './modules/riderTasks/riderTasks.routes.js';
-import path from 'path';
 import partnerOrdersRoutes from './modules/partnerOrders/partnerOrders.routes.js';
 import adminDisputesRoutes from './modules/adminDisputes/adminDisputes.routes.js';
 import adminPayoutsRoutes from './modules/adminPayouts/adminPayouts.routes.js';
 import db from './config/db.js';
 import notificationsRoutes from './modules/notifications/notifications.routes.js';
 import devicesRoutes from './modules/devices/devices.routes.js';
+import adminUsersRoutes from './modules/adminUsers/adminUsers.routes.js';
+
 
 
 
@@ -51,9 +52,9 @@ app.get('/health', (req, res) => {
   res.json({ success: true, message: 'QuickServe API is running' });
 });
 
-app.use('/auth', authRoutes);
-app.use('/addresses', addressesRoutes);
-app.use('/orders', ordersRoutes);
+app.use(authRoutes);          
+app.use('/addresses', addressesRoutes);  
+app.use('/orders', ordersRoutes);     
 app.use(paymentsRoutes);
 app.use(adminAuthRoutes);
 app.use(ridersRoutes);
@@ -65,10 +66,10 @@ app.use(riderTasksRoutes);
 app.use(partnerOrdersRoutes);
 app.use(adminDisputesRoutes);
 app.use(adminPayoutsRoutes);
-app.use('/notifications', notificationsRoutes);
+app.use(notificationsRoutes); 
 app.use(devicesRoutes);
+app.use(adminUsersRoutes);
 
 
 app.use(errorHandler);
-
 export default app;

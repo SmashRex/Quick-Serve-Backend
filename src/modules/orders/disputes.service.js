@@ -7,6 +7,9 @@ export async function createDispute(customerId, orderId, reason) {
   if (order.customer_id !== customerId) {
     throw new ApiError(403, 'You do not have permission to dispute this order.');
   }
+  if (order.current_status === 'disputed') {
+    throw new ApiError(400, 'This order already has an open dispute.');
+  }
 
   const [dispute] = await db('disputes')
     .insert({
@@ -15,11 +18,9 @@ export async function createDispute(customerId, orderId, reason) {
       raised_by_id: customerId,
       reason,
       status: 'open',
-      status_at_dispute: order.current_status,
     })
     .returning('*');
 
-  // Flag the order itself, matching your original state machine's side-state design.
   await db('orders').where({ id: orderId }).update({ current_status: 'disputed', updated_at: new Date() });
 
   return formatDispute(dispute);

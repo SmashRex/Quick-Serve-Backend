@@ -1,6 +1,7 @@
 import db from '../../config/db.js';
 import ApiError from '../../utils/ApiError.js';
 import { formatPartner } from '../../utils/formatters.js';
+import { createNotification } from '../../services/notifications.service.js';
 
 export async function approvePartner(partnerId, maxTurnaroundHours) {
   const partner = await db('partners').where({ id: partnerId }).first();
@@ -75,5 +76,30 @@ export async function updatePartner(partnerId, updates) {
   allowedUpdates.updated_at = new Date();
 
   const [updated] = await db('partners').where({ id: partnerId }).update(allowedUpdates).returning('*');
+  return formatPartnerDetail(updated);
+}
+
+export async function rejectPartner(partnerId, reason) {
+  const partner = await db('partners').where({ id: partnerId }).first();
+  if (!partner) throw new ApiError(404, 'Partner not found.');
+  if (partner.status !== 'onboarding') {
+    throw new ApiError(400, `Partner cannot be rejected from status "${partner.status}".`);
+  }
+
+  const [updated] = await db('partners')
+    .where({ id: partnerId })
+    .update({ status: 'rejected', updated_at: new Date() })
+    .returning('*');
+
+  // Reuse the notification system from Phase 10 — the partner should know
+  // their application was rejected, same as they'd be notified of approval
+  // implicitly via being able to log in.
+  await createNotification({
+    recipientType: 'partner',
+    recipientId: partnerId,
+    type: 'partner_rejected',
+    message: reason ? `Your partner application was not approved: ${reason}` : 'Your partner application was not approved.',
+  });
+
   return formatPartnerDetail(updated);
 }

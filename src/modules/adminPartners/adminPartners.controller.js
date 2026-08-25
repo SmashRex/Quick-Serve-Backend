@@ -40,3 +40,12 @@ export async function update(req, res, next) {
     next(err);
   }
 }
+
+export async function reject(req, res, next) {
+  try {
+    const partner = await adminPartnersService.rejectPartner(req.params.id, req.body.reason);
+    res.status(200).json(partner);
+  } catch (err) {
+    next(err);
+  }
+}
