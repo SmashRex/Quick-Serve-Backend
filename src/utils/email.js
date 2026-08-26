@@ -1,8 +1,21 @@
-import { resend, EMAIL_FROM } from '../config/resend.js';
+import nodemailer from 'nodemailer';
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+});
 
 export async function sendEmail({ to, subject, html }) {
   try {
-    await resend.emails.send({ from: EMAIL_FROM, to, subject, html });
+    await transporter.sendMail({
+      from: `QuickServe <${process.env.GMAIL_USER}>`,
+      to,
+      subject,
+      html,
+    });
   } catch (err) {
     // Deliberately NOT re-thrown — same reasoning as Firebase writes. A
     // signup/reset flow should not fail entirely just because the email
