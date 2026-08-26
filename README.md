@@ -1172,8 +1172,6 @@ This project is licensed under the **MIT License**.
 
 See the [LICENSE](LICENSE) file for the full license text.
 
-> **Note:** If this repository will contain proprietary QuickServe business logic, credentials, or commercially sensitive material, choose a license deliberately before publishing. MIT permits broad reuse, modification, and redistribution.
-
 ---
 
 # Author
