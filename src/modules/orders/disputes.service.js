@@ -18,6 +18,7 @@ export async function createDispute(customerId, orderId, reason) {
       raised_by_id: customerId,
       reason,
       status: 'open',
+      status_at_dispute: order.current_status,
     })
     .returning('*');
 
