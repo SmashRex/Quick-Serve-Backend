@@ -130,3 +130,28 @@ warning firebase-admin > @google-cloud/storage > teeny-request > uuid@9.0.1: uui
 warning firebase-admin > google-auth-library > gaxios > node-fetch > fetch-blob > node-domexception@1.0.0: Use your platform's native DOMException instead
 warning firebase-admin > @google-cloud/firestore > google-gax > rimraf > glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 warning multer@1.4.5-lts.2: Multer 1.x is impacted by a number of vulnerabilities, which have been patched in 2.x. You should upgrade to the latest 2.x version.
+
+
+
+Here's the running list, based on everything confirmed so far plus what's still open:
+
+✅ Resolved this session (settled, no more testing needed)
+
+Password reset — routes/controller/service all wired correctly (service lives in src/services/, not the module folder — just an unusual location, not a bug)
+Duplicate dispute guard — confirmed hard-blocked with 400 ApiError, ownership check included, status_at_dispute capture intact
+"Firebase" confusion clarified — two unrelated features share the name: Firestore real-time order status (code-complete, untested) vs. FCM push notifications (not started at all, confirmed)
+
+🔲 Still to do, in priority order
+
+Live-test the password-reset enumeration guard — hit /auth/forgot-password with a fake email, confirm no row lands in password_reset_tokens. (Code review passed; this is the actual behavioral proof still missing.)
+Build GET /admin/riders (list) — actively blocking frontend dev
+Build GET /admin/customers (list) — confirm it's actually wanted first (wasn't in original PRD), then build
+Check notifications module structure — no notifications.service.js exists; confirm queries live in controller or elsewhere before assuming it's fine
+Confirm whether today's/recent local fixes are actually deployed to Render — frontend dev explicitly asked you not to assume this
+Build resend-verification-email endpoint — confirmed missing by both your doc and frontend dev
+Decide + communicate back to frontend dev: duplicate-dispute is blocked (settled), Firebase/notifications distinction (settled) — these two just need a message to him, no code work
+Package manager inconsistency (npm local / yarn on Render) — lower priority, flagged as "not urgent" originally
+No partner/rider dispute-raising route — customer-only currently; needs a product decision, not just code
+No commission model on payouts — payout = full order price; needs a product decision
+Rate limiting thresholds untested — code exists, no one has triggered a limit
+Firestore real-time writes untested — confirm a write actually lands in the Firebase console

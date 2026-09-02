@@ -8,3 +8,17 @@ export async function createRider(req, res, next) {
     next(err);
   }
 }
+
+export async function getRiders(req, res, next) {
+  try {
+    const { status, page, limit } = req.query;
+    const result = await ridersService.getRiders({
+      status,
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+    });
+    res.status(200).json(result);
+  } catch (err) {
+    next(err);
+  }
+}

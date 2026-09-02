@@ -8,5 +8,5 @@ import * as ridersController from './riders.controller.js';
 const router = Router();
 
 router.post('/admin/riders', authenticate, authorize('admin'), validate(createRiderSchema), ridersController.createRider);
-
+router.get('/admin/riders', authenticate, authorize('admin'), ridersController.getRiders);
 export default router;
