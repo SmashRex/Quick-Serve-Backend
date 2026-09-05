@@ -29,3 +29,9 @@ export const signupLimiter = buildLimiter({
   limit: 20,
   message: 'Too many signup attempts. Please try again later.',
 });
+
+export const resendVerificationLimiter = buildLimiter({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  limit: 5,
+  message: 'Too many verification email requests. Please try again in an hour.',
+});

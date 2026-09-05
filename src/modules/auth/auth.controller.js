@@ -52,3 +52,12 @@ export async function logout(req, res, next) {
     next(err);
   }
 }
+
+export async function resendVerification(req, res, next) {
+  try {
+    await authService.resendVerification(req.body.email);
+    res.status(200).json({ message: 'If an account with that email exists and is not yet verified, a new verification link has been sent.' });
+  } catch (err) {
+    next(err);
+  }
+}

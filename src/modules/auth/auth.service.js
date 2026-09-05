@@ -33,7 +33,7 @@ export async function signup({ fullName, email, password, phone }) {
     expires_at,
   });
 
- const verificationUrl= `${process.env.BASE_URL}/auth/verify-email/${rawToken}`;
+const verificationUrl = `${process.env.APP_BASE_URL}/verify?token=${rawToken}`;
 
   await sendEmail({
   to: email,
@@ -128,4 +128,30 @@ export async function refresh(refreshToken) {
   const newRefreshToken = generateRefreshToken(payload);
 
   return { accessToken, refreshToken: newRefreshToken };
+}
+
+export async function resendVerification(email) {
+  const user = await db('users').where({ email }).first();
+
+  // Same enumeration-safe pattern as password reset: do nothing differently
+  // if the account doesn't exist or is already verified — the controller
+  // always returns the same generic message regardless.
+  if (!user || user.email_verified_at) return;
+
+  const { rawToken, tokenHash } = generateVerificationToken();
+  const expires_at = new Date(Date.now() + VERIFICATION_EXPIRY_HOURS * 60 * 60 * 1000);
+
+  await db('verification_tokens').insert({
+    user_id: user.id,
+    token_hash: tokenHash,
+    expires_at,
+  });
+
+  const verificationUrl = `${process.env.APP_BASE_URL}/verify?token=${rawToken}`;
+
+  await sendEmail({
+    to: email,
+    subject: 'Verify your QuickServe account',
+    html: verifyEmailTemplate(verificationUrl),
+  });
 }
