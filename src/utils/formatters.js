@@ -111,3 +111,15 @@ export function formatPartner(row) {
     updatedAt: row.updated_at,
   };
 }
+
+export function formatUser(row) {
+  return {
+    id: row.id,
+    fullName: row.full_name,
+    email: row.email,
+    phone: row.phone,
+    isVerified: !!row.email_verified_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}

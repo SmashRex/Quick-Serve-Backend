@@ -20,7 +20,7 @@ const router = Router();
 
 router.post('/refresh', validate(refreshSchema), authController.refresh);
 router.get('/me', authenticate, authController.me);
-router.get('/verify', authController.verifyEmail);
+router.get('/auth/verify', authController.verifyEmail);
 router.post('/logout', authenticate, authController.logout);
 router.post('/auth/reset-password', validate(resetPasswordSchema), passwordResetController.resetPassword);
 router.post('/auth/signup', signupLimiter, validate(signupSchema), authController.signup);

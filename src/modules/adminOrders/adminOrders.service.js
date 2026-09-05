@@ -2,6 +2,7 @@ import db from '../../config/db.js';
 import ApiError from '../../utils/ApiError.js';
 import { formatOrder } from '../../utils/formatters.js';
 import { assertValidTransition } from '../../services/orderTransitions.service.js';
+import { createNotification } from '../../services/notifications.service.js';
 
 const ASSIGNABLE_ASSIGNMENT_TYPES = ['pickup', 'delivery'];
 
@@ -55,6 +56,13 @@ export async function assignRider(orderId, riderId, assignmentType, assignedByAd
     return updatedOrder;
   });
 
+    await createNotification({
+    recipientType: 'rider',
+    recipientId: riderId,
+    type: 'order_assigned',
+    message: `You've been assigned a ${assignmentType} for order #${orderId}.`,
+    orderId,
+  });
   const items = await db('order_items').where({ order_id: orderId });
   return formatOrder(updated, items);
 }
@@ -90,6 +98,13 @@ export async function assignPartner(orderId, partnerId, assignedByAdminId) {
     return updated;
   });
 
+    await createNotification({
+    recipientType: 'partner',
+    recipientId: partnerId,
+    type: 'order_assigned',
+    message: `A new order has been sent to you for cleaning.`,
+    orderId,
+  });
   const items = await db('order_items').where({ order_id: orderId });
   return formatOrder(updatedOrder, items);
 }

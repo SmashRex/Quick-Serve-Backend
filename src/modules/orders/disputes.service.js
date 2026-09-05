@@ -1,5 +1,6 @@
 import db from '../../config/db.js';
 import ApiError from '../../utils/ApiError.js';
+import { createNotification } from '../../services/notifications.service.js';
 
 export async function createDispute(customerId, orderId, reason) {
   const order = await db('orders').where({ id: orderId }).first();
@@ -24,6 +25,18 @@ export async function createDispute(customerId, orderId, reason) {
 
   await db('orders').where({ id: orderId }).update({ current_status: 'disputed', updated_at: new Date() });
 
+    const admins = await db('admin_users').select('id');
+  await Promise.all(
+    admins.map((admin) =>
+      createNotification({
+        recipientType: 'admin',
+        recipientId: admin.id,
+        type: 'dispute_raised',
+        message: `A new dispute was raised on order #${orderId}.`,
+        orderId,
+      })
+    )
+  );
   return formatDispute(dispute);
 }
 

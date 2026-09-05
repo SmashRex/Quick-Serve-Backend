@@ -21,6 +21,7 @@ import db from './config/db.js';
 import notificationsRoutes from './modules/notifications/notifications.routes.js';
 import devicesRoutes from './modules/devices/devices.routes.js';
 import adminUsersRoutes from './modules/adminUsers/adminUsers.routes.js';
+import adminCustomersRoutes from './modules/adminCustomers/adminCustomers.routes.js';
 
 
 
@@ -69,6 +70,7 @@ app.use(adminPayoutsRoutes);
 app.use(notificationsRoutes); 
 app.use(devicesRoutes);
 app.use(adminUsersRoutes);
+app.use(adminCustomersRoutes);
 
 
 app.use(errorHandler);
