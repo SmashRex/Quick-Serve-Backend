@@ -29,6 +29,7 @@ import adminCustomersRoutes from './modules/adminCustomers/adminCustomers.routes
 
 
 const app = express();
+app.set('trust proxy', 1);
 
 app.use(helmet());
 app.use(cors());

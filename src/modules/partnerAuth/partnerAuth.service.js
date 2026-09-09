@@ -4,6 +4,8 @@ import db from '../../config/db.js';
 import ApiError from '../../utils/ApiError.js';
 import { generateVerificationToken, generateAccessToken, generateRefreshToken } from '../../utils/tokens.js';
 import { formatPartner } from '../../utils/formatters.js';
+import { sendEmail } from '../../utils/email.js';
+import { verifyEmailTemplate } from '../../templates/emailTemplates.js';
 
 const SALT_ROUNDS = 10;
 const VERIFICATION_EXPIRY_HOURS = 24;
@@ -36,9 +38,13 @@ export async function onboardPartner({ businessName, email, password, phone, max
     expires_at,
   });
 
-  // No email provider yet — log the link so we can test manually
-  console.log(`Verification link for ${email}: ${process.env.BASE_URL}/partner-auth/verify-email/${rawToken}`);
+const verificationUrl = `${process.env.APP_BASE_URL}/partner-auth/verify?token=${rawToken}`;
 
+await sendEmail({
+  to: email,
+  subject: 'Verify your QuickServe partner account',
+  html: verifyEmailTemplate(verificationUrl),
+});
   return formatPartner(partner);
 }
 

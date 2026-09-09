@@ -18,6 +18,13 @@ export async function signup({ fullName, email, password, phone }) {
     throw new ApiError(409, 'An account with this email already exists.');
   }
 
+  if(phone) {
+    const existingPhone = await db('users').where({ phone }).first();
+    if (existingPhone) {
+      throw new ApiError(409, 'An account with this phone number already exists.');
+    }
+  }
+
   const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
 
   const [user] = await db('users')
@@ -33,8 +40,7 @@ export async function signup({ fullName, email, password, phone }) {
     expires_at,
   });
 
-const verificationUrl = `${process.env.APP_BASE_URL}/verify?token=${rawToken}`;
-
+const verificationUrl = `${process.env.APP_BASE_URL}/auth/verify?token=${rawToken}`;
   await sendEmail({
   to: email,
   subject: 'Verify your QuickServe account',
